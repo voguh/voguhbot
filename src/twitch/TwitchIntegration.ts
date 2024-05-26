@@ -15,9 +15,11 @@ limitations under the License.
 ***************************************************************************** */
 
 import { StaticAuthProvider } from '@twurple/auth'
+import { ChatRaidInfo, UserNotice } from '@twurple/chat'
 
 import ConfigService from 'voguhbot/services/ConfigService'
 import LoggerService from 'voguhbot/services/LoggerService'
+import RaidEventHandler, { TwitchRaidEvent } from 'voguhbot/twitch/events/RaidEventHandler'
 import TwurpleApiClient from 'voguhbot/twitch/twurple/TwurpleApiClient'
 import TwurpleChatClient from 'voguhbot/twitch/twurple/TwurpleChatClient'
 import { SCOPES } from 'voguhbot/utils/constants'
@@ -30,6 +32,8 @@ export default class TwitchIntegration {
   private readonly _apiClient: TwurpleApiClient
   private readonly _chatClient: TwurpleChatClient
 
+  private readonly _raidEventHandler: RaidEventHandler
+
   constructor(configService: ConfigService) {
     this._configService = configService
 
@@ -37,7 +41,9 @@ export default class TwitchIntegration {
     this._apiClient = new TwurpleApiClient({ authProvider })
     this._chatClient = new TwurpleChatClient({ authProvider, channels: [] })
 
-    this._chatClient.onRaid((...args) => logger.info(args))
+    this._raidEventHandler = new RaidEventHandler(this._configService, this._apiClient)
+
+    this._chatClient.onRaid((...args) => this._onRaid(...args))
     this._chatClient.onSub((...args) => logger.info(args))
     this._chatClient.onResub((...args) => logger.info(args))
     this._chatClient.onMessage((...args) => logger.info(args))
@@ -89,4 +95,24 @@ export default class TwitchIntegration {
       this._joinedChannels.splice(indexOf, 1)
     }
   }
+
+  // #region << ON RAID >>
+  private _onRaid(channel: string, user: string, raidInfo: ChatRaidInfo, msg: UserNotice): void {
+    const userInfo = msg.userInfo
+    const event: TwitchRaidEvent = {
+      broadcasterId: msg.channelId,
+      broadcasterName: channel,
+      userId: userInfo.userId,
+      userName: user,
+      userDisplayName: userInfo.displayName,
+
+      viewerCount: raidInfo.viewerCount,
+
+      action: (text) => this._chatClient.action(channel, text),
+      say: (text: string) => this._chatClient.say(channel, text)
+    }
+
+    this._raidEventHandler.onEvent(event)
+  }
+  // #endregion
 }
