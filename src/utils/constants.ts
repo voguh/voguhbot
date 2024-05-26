@@ -19,3 +19,12 @@ import path from 'node:path'
 export const LIB_PATH = path.resolve(__dirname, '..')
 export const ROOT_PATH = path.resolve(LIB_PATH, '..')
 export const LOGS_PATH = path.resolve(ROOT_PATH, 'logs')
+
+export const SCOPES = [
+  'chat:edit',
+  'chat:read',
+  'channel:moderate',
+  'clips:edit',
+  'moderator:read:chatters',
+  'moderator:read:followers'
+]

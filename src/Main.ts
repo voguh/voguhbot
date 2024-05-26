@@ -14,12 +14,50 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-import LoggerService from './services/LoggerService'
+import crypto from 'node:crypto'
+
+import LoggerService from 'voguhbot/services/LoggerService'
+import { SCOPES } from 'voguhbot/utils/constants'
+import Strings from 'voguhbot/utils/Strings'
 
 const logger = LoggerService.getLogger()
 class Main {
   public static async start(_args: string[]): Promise<void> {
+    logger.debug('Checking required environment variables...')
+    if (this._checkEnvironmentVariables()) {
+      process.exit(1)
+    }
+
     logger.info('Hello, world!')
+  }
+
+  private static _checkEnvironmentVariables(): boolean {
+    const variables = ['TWITCH_CLIENT_ID', 'TWITCH_ACCESS_TOKEN']
+    let missingRequiredVars = false
+
+    for (const varName of variables) {
+      const envVar = process.env[varName]
+      if (!Strings.isNullOrEmpty(envVar)) {
+        continue
+      }
+
+      logger.fatal(`Missing environment variable: ${varName}`)
+      missingRequiredVars = true
+    }
+
+    if (missingRequiredVars && Strings.isNullOrEmpty(process.env.TWITCH_ACCESS_TOKEN)) {
+      const qs = new URLSearchParams({
+        client_id: process.env.TWITCH_CLIENT_ID,
+        redirect_uri: 'https://oscproject.net/twitch/oauth/authorized',
+        response_type: 'token',
+        scope: SCOPES.join(' '),
+        state: crypto.randomBytes(16).toString('hex')
+      })
+      logger.warn(`If 'TWITCH_ACCESS_TOKEN' is missing, use the url below to authorize an user:`)
+      logger.warn(`https://id.twitch.tv/oauth2/authorize?${qs.toString()}`)
+    }
+
+    return missingRequiredVars
   }
 }
 
