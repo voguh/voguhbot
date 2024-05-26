@@ -12,7 +12,8 @@
     "@twurple/api": "^7.1.0",
     "@twurple/auth": "^7.1.0",
     "@twurple/chat": "^7.1.0",
-    "winston": "^3.13.0"
+    "winston": "^3.13.0",
+    "yaml": "^2.4.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.1",

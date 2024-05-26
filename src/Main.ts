@@ -16,6 +16,7 @@ limitations under the License.
 
 import crypto from 'node:crypto'
 
+import ConfigService from 'voguhbot/services/ConfigService'
 import LoggerService from 'voguhbot/services/LoggerService'
 import TwitchIntegration from 'voguhbot/twitch/TwitchIntegration'
 import { SCOPES } from 'voguhbot/utils/constants'
@@ -28,6 +29,8 @@ class Main {
     if (this._checkEnvironmentVariables()) {
       process.exit(1)
     }
+
+    const configService = new ConfigService()
 
     const twitchIntegration = new TwitchIntegration()
     await twitchIntegration.start()

@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-declare namespace NodeJS {
-  interface ProcessEnv {
-    readonly LOG_LEVEL: string
-    readonly TWITCH_CLIENT_ID: string
-    readonly TWITCH_ACCESS_TOKEN: string
-  }
+enum UserType {
+  VIEWER = 0,
+  SUB = 1,
+  VIP = 2,
+  MODERATOR = 3,
+  BROADCASTER = 4
 }
+
+export default UserType

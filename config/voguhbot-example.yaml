@@ -1,0 +1,22 @@
+channels:
+  CHANNEL_USERNAME_HERE:
+    sub:
+      message: "Thank you for subscription, @${userName}! Don't forget to join our Discord server; did you know you have a special role there?"
+    raid:
+      autoShoutout: false
+      message: "!s2 ${userName}"
+    commands:
+      - command: "!so"
+        aliases: [ "!s2" ]
+        userType: "MODERATOR"
+        globalCooldown: 10
+        output: "Meet ${channel ${1}} who was streaming ${game ${1}}! Visit https://twitch.tv/${channel ${1}}"
+      - command: "!clip"
+        aliases: []
+        userType: "SUB"
+        globalCooldown: 30
+        reply: true
+        output: "${clipUrl}"
+        discord:
+          webhook: "discord-webhook-url"
+          message: "Author: ${userName}\n${clipUrl}"

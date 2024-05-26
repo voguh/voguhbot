@@ -14,10 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-declare namespace NodeJS {
-  interface ProcessEnv {
-    readonly LOG_LEVEL: string
-    readonly TWITCH_CLIENT_ID: string
-    readonly TWITCH_ACCESS_TOKEN: string
+declare interface VoguhBotConfig {
+  channels: Record<string, VoguhBotChannel>
+}
+
+declare interface VoguhBotChannel {
+  sub?: VoguhBotSub
+  raid?: VoguhBotRaid
+  commands?: VoguhBotCommand[]
+}
+
+declare interface VoguhBotSub {
+  message: string
+}
+
+declare interface VoguhBotRaid {
+  autoShoutout: boolean
+  message: string
+}
+
+declare interface VoguhBotCommand {
+  command: string
+  globalCooldown?: number
+  userCooldown?: number
+  aliases: string[]
+  output: string
+  userType: import('voguhbot/utils/UserType').default
+  reply?: boolean
+}
+
+declare interface VoguhBotClipCommand extends VoguhBotCommand {
+  specialCommand: 'CHATBOT_CLIP'
+  discord?: {
+    webhook?: string
+    message: string
   }
 }
