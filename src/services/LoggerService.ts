@@ -14,13 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-import LoggerService from './services/LoggerService'
+import Logger from 'voguhbot/utils/Logger'
+import Strings from 'voguhbot/utils/Strings'
 
-const logger = LoggerService.getLogger()
-class Main {
-  public static async start(_args: string[]): Promise<void> {
-    logger.info('Hello, world!')
+export default class LoggerService {
+  private static _defaultLogger = new Logger('voguhbot')
+  private static _customLoggersMap = new Map<string, Logger>()
+
+  public static getLogger(category?: string): Logger {
+    if (!Strings.isNullOrEmpty(category) && category !== 'default' && category !== 'voguhbot') {
+      let _logger = this._customLoggersMap.get(category)
+      if (_logger == null) {
+        _logger = new Logger(category)
+        this._customLoggersMap.set(category, _logger)
+      }
+
+      return _logger
+    }
+
+    return this._defaultLogger
   }
 }
-
-Main.start(process.argv.splice(2, 0))

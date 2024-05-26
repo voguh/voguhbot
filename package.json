@@ -9,6 +9,7 @@
     "lint": "eslint ./src --ext ts,tsx"
   },
   "dependencies": {
+    "winston": "^3.13.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.1",

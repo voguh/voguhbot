@@ -14,13 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-import LoggerService from './services/LoggerService'
-
-const logger = LoggerService.getLogger()
-class Main {
-  public static async start(_args: string[]): Promise<void> {
-    logger.info('Hello, world!')
+export default class Strings {
+  public static isNullOrEmpty(s: string): boolean {
+    return s == null || s.trim() === ''
   }
 }
-
-Main.start(process.argv.splice(2, 0))

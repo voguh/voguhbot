@@ -14,13 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-import LoggerService from './services/LoggerService'
+import path from 'node:path'
 
-const logger = LoggerService.getLogger()
-class Main {
-  public static async start(_args: string[]): Promise<void> {
-    logger.info('Hello, world!')
-  }
-}
-
-Main.start(process.argv.splice(2, 0))
+export const LIB_PATH = path.resolve(__dirname, '..')
+export const ROOT_PATH = path.resolve(LIB_PATH, '..')
+export const LOGS_PATH = path.resolve(ROOT_PATH, 'logs')
