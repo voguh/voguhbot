@@ -32,7 +32,7 @@ class Main {
 
     const configService = new ConfigService()
 
-    const twitchIntegration = new TwitchIntegration()
+    const twitchIntegration = new TwitchIntegration(configService)
     await twitchIntegration.start()
   }
 

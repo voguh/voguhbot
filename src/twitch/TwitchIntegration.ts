@@ -16,6 +16,7 @@ limitations under the License.
 
 import { StaticAuthProvider } from '@twurple/auth'
 
+import ConfigService from 'voguhbot/services/ConfigService'
 import LoggerService from 'voguhbot/services/LoggerService'
 import TwurpleApiClient from 'voguhbot/twitch/twurple/TwurpleApiClient'
 import TwurpleChatClient from 'voguhbot/twitch/twurple/TwurpleChatClient'
@@ -23,10 +24,15 @@ import { SCOPES } from 'voguhbot/utils/constants'
 
 const logger = LoggerService.getLogger()
 export default class TwitchIntegration {
+  private readonly _joinedChannels = []
+  private readonly _configService: ConfigService
+
   private readonly _apiClient: TwurpleApiClient
   private readonly _chatClient: TwurpleChatClient
 
-  constructor() {
+  constructor(configService: ConfigService) {
+    this._configService = configService
+
     const authProvider = new StaticAuthProvider(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_ACCESS_TOKEN, SCOPES)
     this._apiClient = new TwurpleApiClient({ authProvider })
     this._chatClient = new TwurpleChatClient({ authProvider, channels: [] })
@@ -47,5 +53,40 @@ export default class TwitchIntegration {
 
   public async start(): Promise<void> {
     this._chatClient.connect()
+    this._configService.addListener((config) => this._onConfigUpdate(config))
+  }
+
+  private _onConfigUpdate(config: VoguhBotConfig): void {
+    const joinedChannelsThatNeedToLeave = [...this._joinedChannels]
+    for (const channelName of Object.keys(config.channels)) {
+      if (joinedChannelsThatNeedToLeave.includes(channelName)) {
+        const indexOf = joinedChannelsThatNeedToLeave.indexOf(channelName)
+        joinedChannelsThatNeedToLeave.splice(indexOf, 1)
+      } else {
+        this._chatJoin(channelName)
+      }
+    }
+
+    for (const channelName of joinedChannelsThatNeedToLeave) {
+      this._chatLeave(channelName)
+    }
+  }
+
+  private _chatJoin(channelName: string): void {
+    logger.debug(`VoguhBot is joining '${channelName}'...`)
+    const indexOf = this._joinedChannels.indexOf(channelName)
+    if (this._chatClient != null && indexOf === -1) {
+      this._chatClient.join(channelName)
+      this._joinedChannels.push(channelName)
+    }
+  }
+
+  private _chatLeave(channelName: string): void {
+    logger.debug(`VoguhBot is leaving '${channelName}'...`)
+    const indexOf = this._joinedChannels.indexOf(channelName)
+    if (this._chatClient != null && indexOf >= 0) {
+      this._chatClient.part(channelName)
+      this._joinedChannels.splice(indexOf, 1)
+    }
   }
 }
