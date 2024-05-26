@@ -9,6 +9,9 @@
     "lint": "eslint ./src --ext ts,tsx"
   },
   "dependencies": {
+    "@twurple/api": "^7.1.0",
+    "@twurple/auth": "^7.1.0",
+    "@twurple/chat": "^7.1.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {
