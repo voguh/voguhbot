@@ -151,7 +151,7 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
 
           const webhookData = {
             username: 'VoguhBot',
-            avatar_url: 'https://github.com/voguh/voguhbot/blob/main/docs/icon.png',
+            avatar_url: 'https://github.com/voguh/voguhbot/blob/main/docs/icon.png?raw=true',
             content: normalizedContent,
             embeds: [
               {
