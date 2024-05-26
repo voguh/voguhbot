@@ -15,15 +15,17 @@ limitations under the License.
 ***************************************************************************** */
 
 import { StaticAuthProvider } from '@twurple/auth'
-import { ChatRaidInfo, ChatSubInfo, UserNotice } from '@twurple/chat'
+import { ChatMessage, ChatRaidInfo, ChatSubInfo, ChatUser, UserNotice } from '@twurple/chat'
 
 import ConfigService from 'voguhbot/services/ConfigService'
 import LoggerService from 'voguhbot/services/LoggerService'
+import ChatEventHandler, { TwitchChatEvent } from 'voguhbot/twitch/events/ChatEventHandler'
 import RaidEventHandler, { TwitchRaidEvent } from 'voguhbot/twitch/events/RaidEventHandler'
 import SubscribeEventHandler, { TwitchSubEvent } from 'voguhbot/twitch/events/SubscribeEventHandler'
 import TwurpleApiClient from 'voguhbot/twitch/twurple/TwurpleApiClient'
 import TwurpleChatClient from 'voguhbot/twitch/twurple/TwurpleChatClient'
 import { SCOPES } from 'voguhbot/utils/constants'
+import UserType from 'voguhbot/utils/UserType'
 
 const logger = LoggerService.getLogger()
 export default class TwitchIntegration {
@@ -35,6 +37,7 @@ export default class TwitchIntegration {
 
   private readonly _raidEventHandler: RaidEventHandler
   private readonly _subscribeEventHandler: SubscribeEventHandler
+  private readonly _chatEventHandler: ChatEventHandler
 
   constructor(configService: ConfigService) {
     this._configService = configService
@@ -45,11 +48,12 @@ export default class TwitchIntegration {
 
     this._raidEventHandler = new RaidEventHandler(this._configService, this._apiClient)
     this._subscribeEventHandler = new SubscribeEventHandler(this._configService, this._apiClient)
+    this._chatEventHandler = new ChatEventHandler(this._configService, this._apiClient)
 
     this._chatClient.onRaid((...args) => this._onRaid(...args))
     this._chatClient.onSub((...args) => this._onSubscribe(...args))
     this._chatClient.onResub((...args) => this._onSubscribe(...args))
-    this._chatClient.onMessage((...args) => logger.info(args))
+    this._chatClient.onMessage((...args) => this._onMessage(...args))
 
     this._chatClient.onJoin(function onJoin(broadcasterName, userName) {
       logger.info(`Successfully joined in channel '${broadcasterName}' with user '${userName}'!`)
@@ -139,6 +143,43 @@ export default class TwitchIntegration {
     }
 
     this._subscribeEventHandler.onEvent(event)
+  }
+  // #endregion
+
+  // #region << ON CHAT MESSAGE >>
+  private _getUserType(userInfo: ChatUser): UserType {
+    if (userInfo.isBroadcaster) {
+      return UserType.BROADCASTER
+    } else if (userInfo.isMod) {
+      return UserType.MODERATOR
+    } else if (userInfo.isVip) {
+      return UserType.VIP
+    } else if (userInfo.isSubscriber) {
+      return UserType.SUB
+    } else {
+      return UserType.VIEWER
+    }
+  }
+
+  private _onMessage(channel: string, user: string, text: string, msg: ChatMessage): void {
+    const userInfo = msg.userInfo
+    const event: TwitchChatEvent = {
+      broadcasterId: msg.channelId,
+      broadcasterName: channel,
+      userId: userInfo.userId,
+      userName: user,
+      userDisplayName: userInfo.displayName,
+
+      userType: this._getUserType(userInfo),
+      text: text,
+      message: msg,
+
+      action: (text) => this._chatClient.action(channel, text),
+      reply: (text: string) => this._chatClient.say(channel, text, { replyTo: msg }),
+      say: (text: string) => this._chatClient.say(channel, text)
+    }
+
+    this._chatEventHandler.onEvent(event)
   }
   // #endregion
 }
