@@ -1,0 +1,37 @@
+{
+  "name": "voguhbot",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "node ./dist/Main.js",
+    "dev": "nodemon --exec 'ts-node' -r dotenv/config -r tsconfig-paths/register ./src/Main.ts",
+    "build": "babel ./src --out-dir=\"./dist\" --config-file=\"./babel.config.js\" --extensions=\".ts,.js\" --copy-files --no-copy-ignored --no-comments",
+    "lint": "eslint ./src --ext ts,tsx"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.24.1",
+    "@babel/core": "^7.24.4",
+    "@babel/preset-env": "^7.24.4",
+    "@babel/preset-typescript": "^7.24.1",
+    "@types/node": "^18",
+    "@typescript-eslint/eslint-plugin": "^7.7.0",
+    "@typescript-eslint/parser": "^7.7.0",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "dotenv": "^16.4.5",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-import-helpers": "^1.3.1",
+    "eslint-plugin-n": "^16.0.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-promise": "^6.1.1",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
+  }
+}
