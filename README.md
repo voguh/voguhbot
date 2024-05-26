@@ -8,7 +8,7 @@ with Discord.
 
 ## Libraries
 #### Core
-- [`@twurple/api`](https://www.npmjs.com/package/@twurple/api) and [`@twurple/chat`](https://www.npmjs.com/package/@twurple/api): I decided to use these libraries because
+- [`@twurple/api`](https://www.npmjs.com/package/@twurple/api) and [`@twurple/chat`](https://www.npmjs.com/package/@twurple/chat): I decided to use these libraries because
 they already provides me with access to Twitch API endpoints and Twitch IRC chat with great typing
 and ease of use;
 
