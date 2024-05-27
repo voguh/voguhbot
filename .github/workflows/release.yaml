@@ -1,0 +1,79 @@
+# Copyright 2024 Voguh
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Following tutorial from: https://docs.github.com/en/actions/publishing-packages/publishing-docker-images#publishing-images-to-github-packages
+name: release.yaml
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+env:
+  DOCKER_REGISTRY_URL: ghcr.io
+  DOCKER_REGISTRY_USERNAME: ${{ github.actor }}
+  DOCKER_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  DOCKER_IMAGE_FULL_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt update && sudo apt install -y jq
+
+      - id: version
+        name: Set Version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${{ github.ref_name }}
+          else
+            SHORT_SHA=${{ github.sha }}
+            SHORT_SHA=${SHORT_SHA::7}
+            VERSION=$(jq -r '.version' package.json)-${SHORT_SHA}
+          fi
+          jq --arg version "$VERSION" '.version = $version' package.json > package.tmp.json
+          mv package.tmp.json package.json
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$VERSION"
+      
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY_URL }}
+          username: ${{ env.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ env.DOCKER_REGISTRY_PASSWORD }}
+
+      - id: push
+        name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.DOCKER_IMAGE_FULL_NAME }}:${{ steps.version.outputs.version }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.DOCKER_IMAGE_FULL_NAME }}:${{ steps.version.outputs.version }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
