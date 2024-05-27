@@ -69,6 +69,8 @@ export default class Logger {
       const [_at, method, filePathRaw] = callerParts
       callerMethod = method.split('.').at(-1) ?? '<anonymous>'
       callerFilePath = filePathRaw.slice(1, -1)
+    } else if (callerParts.length === 5) {
+      callerFilePath = callerParts.at(-1).slice(1, -1)
     } else {
       const [_at, filePathRaw] = callerParts
       callerFilePath = filePathRaw
@@ -76,7 +78,7 @@ export default class Logger {
 
     const [filePath, callerRow, _callerColumn] = callerFilePath.split(':')
     const shortFilePath = filePath.replace(`${LIB_PATH}/`, '').replace(/\.(js|ts)/, '')
-    const packageName = `net.oscproject.voguhbot.${shortFilePath.replace('/', '.')}`
+    const packageName = `net.oscproject.voguhbot.${shortFilePath.replace(/\//g, '.')}`
     const info: winston.Logform.TransformableInfo = {
       level: level,
       message: message,
