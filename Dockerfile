@@ -25,9 +25,12 @@ FROM node:18.20.0-alpine
 WORKDIR /voguhbot
 
 COPY --from=builder /voguhbot/dist /voguhbot/lib
+COPY --from=builder /voguhbot/LICENSE /voguhbot/LICENSE
 COPY --from=builder /voguhbot/package.json /voguhbot/package.json
+COPY --from=builder /voguhbot/pnpm-lock.yaml /voguhbot/pnpm-lock.yaml
+COPY --from=builder /voguhbot/README.md /voguhbot/README.md
 
-RUN yarn install --production && mkdir /voguhbot/data /voguhbot/logs
+RUN corepack enable pnpm && pnpm install --prod && mkdir /voguhbot/data /voguhbot/logs
 
 VOLUME [ "/voguhbot/config", "/voguhbot/logs" ]
 
