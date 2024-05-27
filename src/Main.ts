@@ -34,6 +34,11 @@ class Main {
 
     const twitchIntegration = new TwitchIntegration(configService)
     await twitchIntegration.start()
+
+    process.on('SIGTERM', async () => {
+      await twitchIntegration.stop()
+      await configService.stop()
+    })
   }
 
   private static _checkEnvironmentVariables(): boolean {

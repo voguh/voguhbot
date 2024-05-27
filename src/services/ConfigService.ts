@@ -45,6 +45,10 @@ export default class ConfigService {
     this._configUpdate(this.CONFIG_FILE_PATH)
   }
 
+  public async stop(): Promise<void> {
+    fs.unwatchFile(this.CONFIG_FILE_PATH)
+  }
+
   public getChannelConfig(broadcasterName: string): VoguhBotChannel {
     return this._config?.channels?.[broadcasterName]
   }

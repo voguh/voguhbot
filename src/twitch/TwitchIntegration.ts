@@ -65,8 +65,24 @@ export default class TwitchIntegration {
   }
 
   public async start(): Promise<void> {
-    this._chatClient.connect()
+    await new Promise<void>((resolve, reject) => {
+      this._chatClient.onConnect(resolve)
+      this._chatClient.onDisconnect((manually, reason) => {
+        if (reason) {
+          reject(reason)
+        }
+      })
+      this._chatClient.connect()
+    })
+
     this._configService.addListener((config) => this._onConfigUpdate(config))
+  }
+
+  public async stop(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      this._chatClient.onDisconnect((manually, reason) => (reason ? reject(reason) : resolve()))
+      this._chatClient.quit()
+    })
   }
 
   private _onConfigUpdate(config: VoguhBotConfig): void {
