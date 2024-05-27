@@ -33,8 +33,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -72,9 +70,3 @@ jobs:
           push: true
           tags: ${{ env.DOCKER_IMAGE_FULL_NAME }}:${{ steps.version.outputs.version }}
 
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: ${{ env.DOCKER_IMAGE_FULL_NAME }}:${{ steps.version.outputs.version }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
