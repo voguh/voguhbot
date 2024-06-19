@@ -27,6 +27,9 @@ const alias = Object.entries(compilerOptions.paths)
 
 module.exports = {
   presets: [['@babel/preset-env', { targets: { node: 'current' } }], ['@babel/preset-typescript']],
-  plugins: [['module-resolver', { cwd: path.resolve(__dirname), alias }]],
+  plugins: [
+    ['@babel/plugin-proposal-decorators', { legacy: true }],
+    ['module-resolver', { cwd: path.resolve(__dirname), alias }]
+  ],
   ignore: ['**/*.d.ts']
 }

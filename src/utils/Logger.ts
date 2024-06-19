@@ -69,6 +69,10 @@ export default class Logger {
       const [_at, method, filePathRaw] = callerParts
       callerMethod = method.split('.').at(-1) ?? '<anonymous>'
       callerFilePath = filePathRaw.slice(1, -1)
+    } else if (callerParts.length === 4) {
+      const [_at, method, _className, filePathRaw] = callerParts
+      callerMethod = method.split('.').at(-1) ?? '<anonymous>'
+      callerFilePath = filePathRaw.slice(1, -1)
     } else if (callerParts.length === 5) {
       callerFilePath = callerParts.at(-1).slice(1, -1)
     } else {

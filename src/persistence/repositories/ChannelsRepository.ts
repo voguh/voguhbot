@@ -14,17 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-declare namespace NodeJS {
-  interface ProcessEnv {
-    readonly LOG_LEVEL: string
+import { EntityManager } from 'typeorm'
 
-    readonly DATABASE_DRIVER: 'mysql' | 'mariadb' | 'postgres' | 'sqlite' | 'better-sqlite3'
-    readonly DATABASE_URL: string
+import DatabaseManager from 'voguhbot/persistence/DatabaseManager'
+import ChannelEntity from 'voguhbot/persistence/entities/ChannelEntity'
+import TypeORMBaseRepository from 'voguhbot/persistence/repositories/TypeORMBaseRepository'
 
-    readonly TWITCH_CLIENT_ID: string
-    readonly TWITCH_CLIENT_SECRET: string
-    readonly TWITCH_AUTH_USER_CODE: string
+export default class ChannelsRepository extends TypeORMBaseRepository<string, ChannelEntity> {
+  constructor(databaseManagerOrEntityManager: DatabaseManager | EntityManager) {
+    super(databaseManagerOrEntityManager, ChannelEntity)
   }
 }
-
-declare type Class<T, Args = never> = new (...args: Args) => T

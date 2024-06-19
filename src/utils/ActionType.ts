@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-enum UserType {
-  VIEWER = 0,
-  SUB = 1,
-  VIP = 2,
-  MODERATOR = 3,
-  BROADCASTER = 4
+enum ActionType {
+  ON_SUB = 'ON_SUB',
+  ON_RAID = 'ON_RAID'
 }
 
-export default UserType
+export default ActionType

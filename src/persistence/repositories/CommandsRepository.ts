@@ -14,19 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
+import { EntityManager } from 'typeorm'
+
+import DatabaseManager from 'voguhbot/persistence/DatabaseManager'
 import CommandEntity from 'voguhbot/persistence/entities/CommandEntity'
+import TypeORMBaseRepository from 'voguhbot/persistence/repositories/TypeORMBaseRepository'
 
-export type CommandClipSpecialEntity = CommandEntity<{
-  discord: {
-    webhook: string
-    message: string
+export default class CommandsRepository extends TypeORMBaseRepository<string, CommandEntity> {
+  constructor(databaseManager: DatabaseManager | EntityManager) {
+    super(databaseManager, CommandEntity)
   }
-}>
 
-export default class SpecialCommand {
-  public static readonly CHATBOT_CLIP = 'CHATBOT_CLIP'
+  public listByChannelId(channelId: string): Promise<CommandEntity[]> {
+    return this._repository.find({ where: { channelId } })
+  }
 
-  public static clipGuard(commandData: CommandEntity): commandData is CommandClipSpecialEntity {
-    return commandData.specialCommand === SpecialCommand.CHATBOT_CLIP
+  public findChannelCommand(channelId: string, command: string): Promise<CommandEntity> {
+    return this._repository.findOneBy({ channelId, command })
   }
 }
