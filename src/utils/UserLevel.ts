@@ -14,17 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-declare namespace NodeJS {
-  interface ProcessEnv {
-    readonly LOG_LEVEL: string
-
-    readonly DATABASE_DRIVER: 'mysql' | 'mariadb' | 'postgres' | 'sqlite' | 'better-sqlite3'
-    readonly DATABASE_URL: string
-
-    readonly TWITCH_CLIENT_ID: string
-    readonly TWITCH_CLIENT_SECRET: string
-    readonly TWITCH_AUTH_USER_CODE: string
-  }
+enum UserLevel {
+  VIEWER = 0,
+  SUB = 1,
+  VIP = 2,
+  MODERATOR = 3,
+  BROADCASTER = 4
 }
 
-declare type Class<T, Args = never> = new (...args: Args) => T
+export default UserLevel

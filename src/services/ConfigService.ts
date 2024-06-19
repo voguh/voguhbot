@@ -14,94 +14,109 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ***************************************************************************** */
 
-import fs from 'node:fs'
-import path from 'node:path'
-
-import yaml from 'yaml'
-
+import DatabaseManager from 'voguhbot/persistence/DatabaseManager'
+import ActionEntity from 'voguhbot/persistence/entities/ActionEntity'
+import ChannelEntity from 'voguhbot/persistence/entities/ChannelEntity'
+import CommandEntity from 'voguhbot/persistence/entities/CommandEntity'
+import ActionsRepository from 'voguhbot/persistence/repositories/ActionsRepository'
+import ChannelsRepository from 'voguhbot/persistence/repositories/ChannelsRepository'
+import CommandsRepository from 'voguhbot/persistence/repositories/CommandsRepository'
 import LoggerService from 'voguhbot/services/LoggerService'
-import { CONFIG_PATH } from 'voguhbot/utils/constants'
-import UserType from 'voguhbot/utils/UserType'
+
+type ActionCreateDTO = Omit<ActionEntity, 'id' | 'channelId' | 'createdAt' | 'updatedAt' | 'channel'>
+type CommandCreateDTO = Omit<CommandEntity, 'id' | 'channelId' | 'createdAt' | 'updatedAt' | 'channel'>
+export interface ChannelCreateDTO
+  extends Omit<ChannelEntity, 'id' | 'createdAt' | 'updatedAt' | 'actions' | 'commands'> {
+  actions: ActionCreateDTO[]
+  commands: CommandCreateDTO[]
+}
+
+export interface ChannelConfig extends Omit<ChannelEntity, 'actions'> {
+  actions: Map<string, ActionEntity>
+}
 
 const logger = LoggerService.getLogger()
 export default class ConfigService {
-  private readonly CONFIG_FILE_PATH = path.resolve(CONFIG_PATH, 'voguhbot.yaml')
-  private readonly _listeners: ((config: VoguhBotConfig) => void)[] = []
+  private readonly _databaseManager: DatabaseManager
+  private readonly _repository: ChannelsRepository
+  private readonly _listeners: ((config: Map<string, ChannelConfig>) => void)[]
 
-  private _config: VoguhBotConfig
+  private _config: Map<string, ChannelConfig>
 
-  public get config(): VoguhBotConfig {
-    return this._config
+  constructor(databaseManager: DatabaseManager) {
+    this._databaseManager = databaseManager
+    this._repository = new ChannelsRepository(databaseManager)
+    this._listeners = []
   }
 
-  constructor() {
-    if (!fs.existsSync(this.CONFIG_FILE_PATH)) {
-      logger.fatal(`Unable to find config file under '${this.CONFIG_FILE_PATH}'!`)
-      process.exit(1)
-    }
-
-    logger.debug(`Config file '${this.CONFIG_FILE_PATH}' exists!`)
-    fs.watchFile(this.CONFIG_FILE_PATH, () => this._configUpdate(this.CONFIG_FILE_PATH))
-    this._configUpdate(this.CONFIG_FILE_PATH)
+  public async start(): Promise<void> {
+    const channels = await this._repository.listAll()
+    this._config = this._parseChannelsList(channels)
   }
 
   public async stop(): Promise<void> {
-    fs.unwatchFile(this.CONFIG_FILE_PATH)
+    this._config.clear()
+    this._listeners.splice(0, this._listeners.length)
   }
 
-  public getChannelConfig(broadcasterName: string): VoguhBotChannel {
-    return this._config?.channels?.[broadcasterName]
+  public getChannelConfig(broadcasterName: string): ChannelConfig {
+    return this._config.get(broadcasterName)
   }
 
-  public addListener(listener: (config: VoguhBotConfig) => void): void {
+  public addListener(listener: (config: Map<string, ChannelConfig>) => void): void {
     this._listeners.push(listener)
     listener(this._config)
   }
 
-  public removeListener(listener: (config: VoguhBotConfig) => void): void {
+  public removeListener(listener: (config: Map<string, ChannelConfig>) => void): void {
     const indexOf = this._listeners.indexOf(listener)
     if (indexOf !== -1) {
       this._listeners.splice(indexOf, 1)
     }
   }
 
-  private _parseCommandUserType(s: string | number): UserType {
-    switch (typeof s === 'string' ? s.toUpperCase() : s) {
-      case 4:
-      case 'BROADCASTER':
-        return UserType.BROADCASTER
-      case 3:
-      case 'MODERATOR':
-        return UserType.MODERATOR
-      case 2:
-      case 'VIP':
-        return UserType.VIP
-      case 1:
-      case 'SUB':
-        return UserType.SUB
-      default:
-        return UserType.VIEWER
-    }
+  public async registerChannel(data: ChannelCreateDTO): Promise<ChannelEntity> {
+    logger.info('Registering channel data...')
+    const channelData = await this._databaseManager.withTransaction(async (entityManager) => {
+      const channelsRepository = new ChannelsRepository(entityManager)
+      const actionsRepository = new ActionsRepository(entityManager)
+      const commandsRepository = new CommandsRepository(entityManager)
+
+      const { id: channelId } = await channelsRepository.create(data)
+
+      await Promise.all(data.actions.map((action) => actionsRepository.create({ ...action, channelId })))
+      await Promise.all(data.commands.map((command) => commandsRepository.create({ ...command, channelId })))
+
+      return channelsRepository.findById(channelId)
+    })
+    logger.info('Channel data successfully registered!')
+
+    this._emit()
+
+    return channelData
   }
 
-  private _configUpdate(configPath: string): void {
-    const configRaw = yaml.parse(fs.readFileSync(configPath, 'utf-8')) as VoguhBotConfig
+  private async _emit(): Promise<void> {
+    logger.debug('Emitting channels data...')
 
-    for (const [channelName, channelData] of Object.entries(configRaw.channels)) {
-      for (let i = 0; i < channelData.commands.length; i++) {
-        const commandData = channelData.commands[i]
-        configRaw.channels[channelName].commands[i].userType = this._parseCommandUserType(commandData.userType)
-      }
-    }
+    const channels = await this._repository.listAll()
+    this._config = this._parseChannelsList(channels)
 
-    this._config = configRaw
-    this._emit(this._config)
-    logger.debug('Config updated!')
-  }
-
-  private _emit(config: VoguhBotConfig): void {
     for (const listener of this._listeners) {
-      listener(config)
+      listener(this._config)
     }
+
+    logger.debug('Channels data emitted for all listeners!')
+  }
+
+  private _parseChannelsList(channels: ChannelEntity[]): Map<string, ChannelConfig> {
+    const config = new Map<string, ChannelConfig>()
+
+    for (const channel of channels) {
+      const actions = new Map(channel.actions.map((action) => [action.actionType, action]))
+      config.set(channel.username, { ...channel, actions })
+    }
+
+    return config
   }
 }

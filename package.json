@@ -6,19 +6,25 @@
     "start": "node ./dist/Main.js",
     "dev": "nodemon --exec 'ts-node' -r dotenv/config -r tsconfig-paths/register ./src/Main.ts",
     "build": "babel ./src --out-dir=\"./dist\" --config-file=\"./babel.config.js\" --extensions=\".ts,.js\" --copy-files --no-copy-ignored --no-comments",
-    "lint": "eslint ./src --ext ts,tsx"
+    "lint": "eslint ./src --ext ts,tsx",
+    "typeorm": "typeorm-ts-node-esm"
   },
   "dependencies": {
     "@twurple/api": "^7.1.0",
     "@twurple/auth": "^7.1.0",
     "@twurple/chat": "^7.1.0",
     "axios": "^1.7.2",
-    "winston": "^3.13.0",
-    "yaml": "^2.4.2"
+    "better-sqlite3": "^9.6.0",
+    "mysql": "^2.18.1",
+    "pg": "^8.12.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20",
+    "winston": "^3.13.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.1",
     "@babel/core": "^7.24.4",
+    "@babel/plugin-proposal-decorators": "^7.24.7",
     "@babel/preset-env": "^7.24.4",
     "@babel/preset-typescript": "^7.24.1",
     "@types/node": "^18",

@@ -17,17 +17,19 @@ limitations under the License.
 import { ChatMessage } from '@twurple/chat'
 import axios from 'axios'
 
+import CommandEntity from 'voguhbot/persistence/entities/CommandEntity'
 import CooldownService from 'voguhbot/services/CooldownManager'
 import LoggerService from 'voguhbot/services/LoggerService'
 import EventHandler, { TwitchBaseEvent } from 'voguhbot/twitch/events/EventHandler'
-import SpecialCommand from 'voguhbot/utils/SpecialCommand'
-import UserType from 'voguhbot/utils/UserType'
+import CooldownType from 'voguhbot/utils/CooldownType'
+import SpecialCommand, { CommandClipSpecialEntity } from 'voguhbot/utils/SpecialCommand'
+import UserLevel from 'voguhbot/utils/UserLevel'
 
 export interface TwitchChatEvent extends TwitchBaseEvent {
   /**
    * Identify user's type in chat.
    */
-  userType: UserType
+  userType: UserLevel
   /**
    * Raw message text
    */
@@ -48,7 +50,7 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
   public async onEvent(event: TwitchChatEvent): Promise<void> {
     const { broadcasterName, text } = event
     const channelData = this._configService.getChannelConfig(broadcasterName)
-    if (channelData == null || channelData.sub == null) {
+    if (channelData == null) {
       return
     }
 
@@ -66,12 +68,12 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
   }
 
   // eslint-disable-next-line prettier/prettier
-  private _canExecuteCommand(commandKey: string, userName: string, userType: UserType, minimumUserType: UserType, cooldownByUser: boolean): boolean {
-    if (userType < minimumUserType) {
+  private _canExecuteCommand(commandKey: string, userName: string, userLevel: UserLevel, minimumUserLevel: UserLevel, cooldownType: CooldownType): boolean {
+    if (userLevel < minimumUserLevel) {
       _logger.debug(`[${commandKey}] Command called by ${userName} unauthorized!`)
 
       return false
-    } else if (cooldownByUser && CooldownService.isOnCooldown(commandKey, userName)) {
+    } else if (cooldownType === CooldownType.USER && CooldownService.isOnCooldown(commandKey, userName)) {
       _logger.debug(`[${commandKey}] Command called by ${userName} awaiting for user cooldown!`)
 
       return false
@@ -84,15 +86,14 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
     return true
   }
 
-  private async _onChatCommand(data: VoguhBotCommand, params: string[], event: TwitchChatEvent): Promise<void> {
-    const { output, userType: expectedUserType, globalCooldown, reply: asReply, userCooldown } = data
+  private async _onChatCommand(data: CommandEntity, params: string[], event: TwitchChatEvent): Promise<void> {
+    const { message, userLevel: expectedUserLevel, cooldown, cooldownType, asReply } = data
     const { broadcasterName, reply, say, userDisplayName, userName, userType } = event
     const commandKey = `${event.broadcasterName}::${data.command}`
 
     _logger.info(`[${commandKey}] Command called by ${event.userName}!`)
     try {
-      const cooldownByUser = userCooldown != null && userCooldown > 0
-      if (!this._canExecuteCommand(commandKey, userName, userType, expectedUserType, cooldownByUser)) {
+      if (!this._canExecuteCommand(commandKey, userName, userType, expectedUserLevel, cooldownType)) {
         return
       }
 
@@ -104,7 +105,7 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
         userDisplayName: userDisplayName
       }
 
-      let normalizedOutput = await this._replaces(variableReplaces, event.message, output)
+      let normalizedOutput = await this._replaces(variableReplaces, event.message, message)
       if (SpecialCommand.clipGuard(data)) {
         normalizedOutput = await this._onClipCommand(data, normalizedOutput, event)
       }
@@ -120,15 +121,15 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
       _logger.error(`[${commandKey}] Command called by ${event.userName} failed!`)
       _logger.error(e)
     } finally {
-      if (userCooldown != null && userCooldown > 0) {
-        CooldownService.startCooldown(commandKey, userName, userCooldown)
+      if (cooldownType === CooldownType.USER) {
+        CooldownService.startCooldown(commandKey, userName, cooldown)
       } else {
-        CooldownService.startCooldown(commandKey, null, globalCooldown ?? 10)
+        CooldownService.startCooldown(commandKey, null, cooldown)
       }
     }
   }
 
-  private async _onClipCommand(data: VoguhBotClipCommand, msg: string, event: TwitchChatEvent): Promise<string> {
+  private async _onClipCommand(data: CommandClipSpecialEntity, msg: string, event: TwitchChatEvent): Promise<string> {
     const { broadcasterName, userDisplayName, userName } = event
     try {
       const tokenInfo = this._apiClient.tokenInfo ?? (await this._apiClient.getTokenInfo())
@@ -136,38 +137,41 @@ export default class ChatEventHandler extends EventHandler<TwitchChatEvent> {
       const clipId = await this._apiClient.asUser(tokenInfo.userId, (ctx) => ctx.clips.createClip({ channel }))
       const clipUrl = `https://clips.twitch.tv/${clipId}`
 
-      if (data.discord != null) {
-        try {
-          const clipData = await this._apiClient.clips.getClipById(clipId)
-          const discordData = data.discord
+      const specialConfig = data.specialCommandConfig
+      if (specialConfig != null) {
+        const discordData = specialConfig.discord
+        if (specialConfig.discord != null) {
+          try {
+            const clipData = await this._apiClient.clips.getClipById(clipId)
 
-          const variableReplaces = {
-            broadcasterName: broadcasterName,
-            userName: userName,
-            userDisplayName: userDisplayName,
-            clipUrl: clipUrl
+            const variableReplaces = {
+              broadcasterName: broadcasterName,
+              userName: userName,
+              userDisplayName: userDisplayName,
+              clipUrl: clipUrl
+            }
+            const normalizedContent = this._replaces(variableReplaces, null, discordData.message)
+
+            const webhookData = {
+              username: 'VoguhBot',
+              avatar_url: 'https://github.com/voguh/voguhbot/blob/main/docs/icon.png?raw=true',
+              content: normalizedContent,
+              embeds: [
+                {
+                  title: `${clipData.broadcasterDisplayName} - ${clipData.title}`,
+                  description: `Watch ${clipData.broadcasterDisplayName}'s clip titled "${clipData.title}"`,
+                  author: { name: 'Twitch' },
+                  url: clipData.url,
+                  thumbnail: { url: clipData.thumbnailUrl }
+                }
+              ]
+            }
+
+            await axios.post(discordData.webhook, webhookData)
+          } catch (e: any) {
+            _logger.warn(`An error occurred on emit clip to discord:`)
+            _logger.warn(e)
           }
-          const normalizedContent = this._replaces(variableReplaces, null, discordData.message)
-
-          const webhookData = {
-            username: 'VoguhBot',
-            avatar_url: 'https://github.com/voguh/voguhbot/blob/main/docs/icon.png?raw=true',
-            content: normalizedContent,
-            embeds: [
-              {
-                title: `${clipData.broadcasterDisplayName} - ${clipData.title}`,
-                description: `Watch ${clipData.broadcasterDisplayName}'s clip titled "${clipData.title}"`,
-                author: { name: 'Twitch' },
-                url: clipData.url,
-                thumbnail: { url: clipData.thumbnailUrl }
-              }
-            ]
-          }
-
-          await axios.post(discordData.webhook, webhookData)
-        } catch (e: any) {
-          _logger.warn(`An error occurred on emit clip to discord:`)
-          _logger.warn(e)
         }
       }
 

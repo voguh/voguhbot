@@ -16,6 +16,7 @@ limitations under the License.
 
 import crypto from 'node:crypto'
 
+import DatabaseManager from 'voguhbot/persistence/DatabaseManager'
 import ConfigService from 'voguhbot/services/ConfigService'
 import LoggerService from 'voguhbot/services/LoggerService'
 import TwitchIntegration from 'voguhbot/twitch/TwitchIntegration'
@@ -30,19 +31,23 @@ class Main {
       process.exit(1)
     }
 
-    const configService = new ConfigService()
-
+    const databaseManager = new DatabaseManager()
+    const configService = new ConfigService(databaseManager)
     const twitchIntegration = new TwitchIntegration(configService)
+
+    await databaseManager.start()
+    await configService.start()
     await twitchIntegration.start()
 
     process.on('SIGTERM', async () => {
       await twitchIntegration.stop()
       await configService.stop()
+      await databaseManager.stop()
     })
   }
 
   private static _checkEnvironmentVariables(): boolean {
-    const variables = ['TWITCH_CLIENT_ID', 'TWITCH_ACCESS_TOKEN']
+    const variables = ['DATABASE_DRIVER', 'DATABASE_URL', 'TWITCH_CLIENT_ID', 'TWITCH_ACCESS_TOKEN']
     let missingRequiredVars = false
 
     for (const varName of variables) {
@@ -58,7 +63,7 @@ class Main {
     if (missingRequiredVars && Strings.isNullOrEmpty(process.env.TWITCH_ACCESS_TOKEN)) {
       const qs = new URLSearchParams({
         client_id: process.env.TWITCH_CLIENT_ID,
-        redirect_uri: 'https://oscproject.net/twitch/oauth/authorized',
+        redirect_uri: 'https://voguhbot.oscproject.net/twitch/oauth/authorized',
         response_type: 'token',
         scope: SCOPES.join(' '),
         state: crypto.randomBytes(16).toString('hex')

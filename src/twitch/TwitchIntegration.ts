@@ -17,7 +17,7 @@ limitations under the License.
 import { StaticAuthProvider } from '@twurple/auth'
 import { ChatMessage, ChatRaidInfo, ChatSubInfo, ChatUser, UserNotice } from '@twurple/chat'
 
-import ConfigService from 'voguhbot/services/ConfigService'
+import ConfigService, { ChannelConfig } from 'voguhbot/services/ConfigService'
 import LoggerService from 'voguhbot/services/LoggerService'
 import ChatEventHandler, { TwitchChatEvent } from 'voguhbot/twitch/events/ChatEventHandler'
 import RaidEventHandler, { TwitchRaidEvent } from 'voguhbot/twitch/events/RaidEventHandler'
@@ -25,7 +25,7 @@ import SubscribeEventHandler, { TwitchSubEvent } from 'voguhbot/twitch/events/Su
 import TwurpleApiClient from 'voguhbot/twitch/twurple/TwurpleApiClient'
 import TwurpleChatClient from 'voguhbot/twitch/twurple/TwurpleChatClient'
 import { SCOPES } from 'voguhbot/utils/constants'
-import UserType from 'voguhbot/utils/UserType'
+import UserLevel from 'voguhbot/utils/UserLevel'
 
 const logger = LoggerService.getLogger()
 export default class TwitchIntegration {
@@ -85,9 +85,9 @@ export default class TwitchIntegration {
     })
   }
 
-  private _onConfigUpdate(config: VoguhBotConfig): void {
+  private _onConfigUpdate(config: Map<string, ChannelConfig>): void {
     const joinedChannelsThatNeedToLeave = [...this._joinedChannels]
-    for (const channelName of Object.keys(config.channels)) {
+    for (const channelName of config.keys()) {
       if (joinedChannelsThatNeedToLeave.includes(channelName)) {
         const indexOf = joinedChannelsThatNeedToLeave.indexOf(channelName)
         joinedChannelsThatNeedToLeave.splice(indexOf, 1)
@@ -163,17 +163,17 @@ export default class TwitchIntegration {
   // #endregion
 
   // #region << ON CHAT MESSAGE >>
-  private _getUserType(userInfo: ChatUser): UserType {
+  private _getUserType(userInfo: ChatUser): UserLevel {
     if (userInfo.isBroadcaster) {
-      return UserType.BROADCASTER
+      return UserLevel.BROADCASTER
     } else if (userInfo.isMod) {
-      return UserType.MODERATOR
+      return UserLevel.MODERATOR
     } else if (userInfo.isVip) {
-      return UserType.VIP
+      return UserLevel.VIP
     } else if (userInfo.isSubscriber) {
-      return UserType.SUB
+      return UserLevel.SUB
     } else {
-      return UserType.VIEWER
+      return UserLevel.VIEWER
     }
   }
 

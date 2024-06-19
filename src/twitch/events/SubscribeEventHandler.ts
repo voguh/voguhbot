@@ -15,6 +15,7 @@ limitations under the License.
 ***************************************************************************** */
 
 import EventHandler, { TwitchBaseEvent } from 'voguhbot/twitch/events/EventHandler'
+import ActionType from 'voguhbot/utils/ActionType'
 
 export interface TwitchSubEvent extends TwitchBaseEvent {
   /**
@@ -42,13 +43,15 @@ export interface TwitchSubEvent extends TwitchBaseEvent {
 export default class SubscribeEventHandler extends EventHandler<TwitchSubEvent> {
   public async onEvent(event: TwitchSubEvent): Promise<void> {
     const { broadcasterName, say, userDisplayName, userName } = event
+
     const channelData = this._configService.getChannelConfig(broadcasterName)
-    if (channelData == null || channelData.sub == null) {
+    const subAction = channelData?.actions[ActionType.ON_SUB]
+    if (subAction == null) {
       return
     }
 
     const replaces = { userDisplayName, userName }
-    const message = await this._replaces(replaces, null, channelData.sub.message)
+    const message = await this._replaces(replaces, null, subAction.message)
 
     await say(message)
   }

@@ -15,6 +15,7 @@ limitations under the License.
 ***************************************************************************** */
 
 import EventHandler, { TwitchBaseEvent } from 'voguhbot/twitch/events/EventHandler'
+import ActionType from 'voguhbot/utils/ActionType'
 
 export interface TwitchRaidEvent extends TwitchBaseEvent {
   /**
@@ -26,21 +27,16 @@ export interface TwitchRaidEvent extends TwitchBaseEvent {
 export default class RaidEventHandler extends EventHandler<TwitchRaidEvent> {
   public async onEvent(event: TwitchRaidEvent): Promise<void> {
     const { broadcasterName, say, userDisplayName, userName, viewerCount } = event
-    const channelData = this._configService.getChannelConfig(broadcasterName)
-    if (channelData == null || channelData.raid == null) {
-      return
-    }
 
-    if (viewerCount <= 1) {
+    const channelData = this._configService.getChannelConfig(broadcasterName)
+    const raidAction = channelData?.actions[ActionType.ON_RAID]
+    if (raidAction == null || viewerCount <= 1) {
       return
     }
 
     const replaces = { userDisplayName, userName }
-    const message = await this._replaces(replaces, null, channelData.raid.message)
+    const message = await this._replaces(replaces, null, raidAction.message)
 
     await say(message)
-    if (channelData.raid.autoShoutout) {
-      await say(`/shoutout ${userName}`)
-    }
   }
 }
