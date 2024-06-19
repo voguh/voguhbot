@@ -47,7 +47,7 @@ class Main {
   }
 
   private static _checkEnvironmentVariables(): boolean {
-    const variables = ['TWITCH_CLIENT_ID', 'TWITCH_ACCESS_TOKEN']
+    const variables = ['DATABASE_DRIVER', 'DATABASE_URL', 'TWITCH_CLIENT_ID', 'TWITCH_ACCESS_TOKEN']
     let missingRequiredVars = false
 
     for (const varName of variables) {
