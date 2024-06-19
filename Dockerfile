@@ -32,6 +32,6 @@ COPY --from=builder /voguhbot/README.md /voguhbot/README.md
 
 RUN corepack enable pnpm && pnpm install --prod && mkdir /voguhbot/data /voguhbot/logs
 
-VOLUME [ "/voguhbot/config", "/voguhbot/logs" ]
+VOLUME [ "/voguhbot/data", "/voguhbot/logs" ]
 
 CMD ["node", "/voguhbot/lib/Main.js"]
